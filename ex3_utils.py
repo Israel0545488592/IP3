@@ -1,9 +1,10 @@
 import numpy as np
 import cv2
+from functools import reduce
 from typing import List, Tuple
 
 
-def myID() -> np.int:
+def myID() -> int:
     """
     Return my ID (not the friend's ID I copied from)
     :return: int
@@ -105,15 +106,16 @@ def gaussianPyr(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     :param levels: Pyramid depth
     :return: Gaussian pyramid (list of images)
     """
-    
-    return [img] + gaussianPyr(cv2.GaussianBlur(img[::2, ::2], (5, 5), 1)) if levels > 0 else []
+    if levels < 1: return []
+
+    return [img] + gaussianPyr(cv2.GaussianBlur(img, (5, 5), 1)[::2, ::2], levels - 1)
 
 
-def expand(img: np.ndarray) -> np.ndarray:
+def expand(img: np.ndarray, shape: Tuple[int]) -> np.ndarray:
 
-    exp_img = np.zeros_like(2 * img.shape)
+    exp_img = np.zeros(shape)
     exp_img[::2, ::2] = img
-    return exp_img
+    return cv2.GaussianBlur(exp_img, (5, 5), 1)
 
 
 def laplaceianReduce(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
@@ -124,8 +126,8 @@ def laplaceianReduce(img: np.ndarray, levels: int = 4) -> List[np.ndarray]:
     :return: Laplacian Pyramid (list of images)
     """
     gaus_pyr = gaussianPyr(img, levels)
-    return [gaus_pyr[ind] - gaus_pyr[ind + 1] for ind in range(len(gaus_pyr) -1)]
 
+    return [gaus_pyr[ind] - expand(gaus_pyr[ind + 1], gaus_pyr[ind].shape) for ind in range(len(gaus_pyr) -1)] + [gaus_pyr[-1]]
 
 
 def laplaceianExpand(lap_pyr: List[np.ndarray]) -> np.ndarray:
@@ -134,7 +136,7 @@ def laplaceianExpand(lap_pyr: List[np.ndarray]) -> np.ndarray:
     :param lap_pyr: Laplacian Pyramid
     :return: Original image
     """
-    pass
+    return reduce(lambda small, big : big + expand(small, big.shape), reversed(lap_pyr))
 
 
 def pyrBlend(img_1: np.ndarray, img_2: np.ndarray, mask: np.ndarray, levels: int) -> Tuple[np.ndarray]:
@@ -146,4 +148,10 @@ def pyrBlend(img_1: np.ndarray, img_2: np.ndarray, mask: np.ndarray, levels: int
     :param levels: Pyramid depth
     :return: (Naive blend, Blended Image)
     """
-    pass
+
+    lap_pyr_1, lap_pyr_2 = laplaceianReduce(img_1, levels), laplaceianReduce(img_2, levels)
+    gaus_pyr = gaussianPyr(mask, levels)
+    
+    def blend(ind: int) -> np.ndarray: return lap_pyr_1[ind] * gaus_pyr[ind] + (1 - gaus_pyr[ind]) * lap_pyr_2[ind]
+
+    return blend(0), reduce(lambda img, ind : expand(img, gaus_pyr[ind].shape) + blend(ind) , range(-2, -levels - 1, -1), blend(-1))

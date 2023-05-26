@@ -124,11 +124,14 @@ def pyrLaplacianDemo(img_path):
 
 
 def blendDemo():
+
     im1 = cv2.cvtColor(cv2.imread('input/sunset.jpg'), cv2.COLOR_BGR2RGB) / 255
     im2 = cv2.cvtColor(cv2.imread('input/cat.jpg'), cv2.COLOR_BGR2RGB) / 255
     mask = cv2.cvtColor(cv2.imread('input/mask_cat.jpg'), cv2.COLOR_BGR2RGB) / 255
 
     n_blend, im_blend = pyrBlend(im1, im2, mask, 4)
+
+    print(n_blend.shape, im_blend.shape, im1.shape)
 
     f, ax = plt.subplots(2, 3)
     ax[0, 0].imshow(im1)
@@ -147,14 +150,14 @@ def main():
     print("ID:", myID())
 
     img_path = 'input/boxMan.jpg'
-    lkDemo(img_path)
-    hierarchicalkDemo(img_path)
-    compareLK(img_path)
+    #lkDemo(img_path)
+    #hierarchicalkDemo(img_path)
+    #compareLK(img_path)
 
-    imageWarpingDemo(img_path)
+    #imageWarpingDemo(img_path)
 
-    pyrGaussianDemo('input/pyr_bit.jpg')
-    pyrLaplacianDemo('input/pyr_bit.jpg')
+    #pyrGaussianDemo('input/pyr_bit.jpg')
+    #pyrLaplacianDemo('input/pyr_bit.jpg')
     blendDemo()
 
 

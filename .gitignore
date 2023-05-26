@@ -1,2 +1,5 @@
 /input
 /**/*.pdf
+/**/__pycache__
+/**/*.png
+/**/*.jpg
