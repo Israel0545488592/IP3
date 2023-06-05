@@ -131,8 +131,6 @@ def blendDemo():
 
     n_blend, im_blend = pyrBlend(im1, im2, mask, 4)
 
-    print(n_blend.shape, im_blend.shape, im1.shape)
-
     f, ax = plt.subplots(2, 3)
     ax[0, 0].imshow(im1)
     ax[0, 1].imshow(im2)
@@ -156,8 +154,8 @@ def main():
 
     #imageWarpingDemo(img_path)
 
-    #pyrGaussianDemo('input/pyr_bit.jpg')
-    #pyrLaplacianDemo('input/pyr_bit.jpg')
+    pyrGaussianDemo('input/pyr_bit.jpg')
+    pyrLaplacianDemo('input/pyr_bit.jpg')
     blendDemo()
 
 
