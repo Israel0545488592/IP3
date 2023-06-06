@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
 from functools import reduce
+from itertools import product
+from copy import copy
 from typing import List, Tuple
 
 
@@ -25,21 +27,20 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size = 10, win_size = 5) 
     :param win_size: The optical flow window size (odd number)
     :return: Original points [[x,y]...], [[dU,dV]...] for each points
     """
-    diff = im1 - im2
-    row_derv = np.convolve(im2, np.array([-1, 0, 1]).reshape((3, 1)))
-    col_derv = np.convolve(im2, np.array([-1, 0, 1]))
-    translation = np.zeros(2)
-
+    ker = np.array([[-1, 0, 1]])
+    diff = im2 - im1
+    row_derv = cv2.filter2D(im2, -1, ker)
+    col_derv = cv2.filter2D(im2, -1, ker.T)
 
     def min_cross_corr(row: int, col: int) -> Tuple[float]:
 
-        '''least square approximation of min cross corralation of window'''
+        '''least square approximation of min cross corralation of a window'''
 
         win = np.s_[row : row + win_size, col : col + win_size]
         Ix, Iy, It = row_derv[win], col_derv[win], diff[win]
 
         derv_mat = np.array([[(Ix * Ix).sum(), (Ix * Iy).sum()],
-                             [(Ix * Iy).sum()], (Iy * Iy).sum()])
+                             [(Ix * Iy).sum(), (Iy * Iy).sum()]])
         
         # singularity check
         ev1, ev2 = sorted(np.linalg.eigvals(derv_mat))
@@ -48,16 +49,12 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size = 10, win_size = 5) 
         diff_vec = -np.array([(Ix * It).sum(), (Iy * It).sum()])
 
         return np.linalg.inv(derv_mat) @ diff_vec
+
+
+    indxs = product(range(0, im1.shape[0], step_size), range(0, im1.shape[1], step_size))
+
+    return np.array([(col, row) for row, col in copy(indxs)]), np.array([min_cross_corr(row, col) for row, col in copy(indxs)])
     
-    min_cross_corr = np.vectorize(min_cross_corr)
-
-    # I'm clueless about this stage, this is just a place holder
-    # it sould include some update to im1 each iteration
-    # and i am not sure thats the meaning of step_size
-    # use reduce if possable
-    for itr in range(step_size): translation += sum(min_cross_corr(im1))
-
-    return translation
         
 
 
@@ -72,7 +69,8 @@ def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int, stepSize: int, 
     where the first channel holds U, and the second V.
     """
     gaus_pyr1, gaus_pyr2 = gaussianPyr(img1, k), gaussianPyr(img2, k)
-    # maybe def auxiliray function and use rfunctools.educe
+    
+    
 
 
 # ---------------------------------------------------------------------------
