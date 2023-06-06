@@ -69,8 +69,20 @@ def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int, stepSize: int, 
     where the first channel holds U, and the second V.
     """
     gaus_pyr1, gaus_pyr2 = gaussianPyr(img1, k), gaussianPyr(img2, k)
+
+    def flow(ind: int):
+
+        pts, motion = opticalFlow(gaus_pyr1[ind], gaus_pyr2[ind], stepSize, winSize)
+        return motion.reshape(gaus_pyr1[ind].shape[0] // stepSize, gaus_pyr1[ind].shape[1] // stepSize, 2)
     
-    
+    def add_flows(small: np.ndarray, big: np.ndarray):
+
+        exp = np.zeros(big.shape)
+        exp[::2, ::2] = 2 * small
+        return exp + big
+        
+    return reduce(lambda motion, ind : add_flows(motion, flow(ind)), range(-2, -k -1, -1), flow(-1))
+
 
 
 # ---------------------------------------------------------------------------
