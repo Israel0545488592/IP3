@@ -27,10 +27,9 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size = 10, win_size = 5) 
     :param win_size: The optical flow window size (odd number)
     :return: Original points [[x,y]...], [[dU,dV]...] for each points
     """
-    ker = np.array([[-1, 0, 1]])
     diff = im2 - im1
-    row_derv = cv2.filter2D(im2, -1, ker)
-    col_derv = cv2.filter2D(im2, -1, ker.T)
+    row_derv = cv2.filter2D(im2, -1, np.array([[-1, 0, 1]]))
+    col_derv = cv2.filter2D(im2, -1, np.array([[-1, 0, 1]]).transpose())
 
     def min_cross_corr(row: int, col: int) -> Tuple[float]:
 
@@ -39,16 +38,16 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size = 10, win_size = 5) 
         win = np.s_[row : row + win_size, col : col + win_size]
         Ix, Iy, It = row_derv[win], col_derv[win], diff[win]
 
-        derv_mat = np.array([[(Ix * Ix).sum(), (Ix * Iy).sum()],
+        mcc_mat = np.array([[(Ix * Ix).sum(), (Ix * Iy).sum()],
                              [(Ix * Iy).sum(), (Iy * Iy).sum()]])
         
         # singularity check
-        ev1, ev2 = sorted(np.linalg.eigvals(derv_mat))
+        ev1, ev2 = sorted(np.linalg.eigvals(mcc_mat))
         if ev1 < 1 or ev2 / ev1 > 100: return np.zeros(2)
 
         diff_vec = -np.array([(Ix * It).sum(), (Iy * It).sum()])
 
-        return np.linalg.inv(derv_mat) @ diff_vec
+        return np.linalg.inv(mcc_mat) @ diff_vec
 
 
     indxs = product(range(0, im1.shape[0], step_size), range(0, im1.shape[1], step_size))

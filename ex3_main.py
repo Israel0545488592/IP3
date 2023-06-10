@@ -81,39 +81,69 @@ def imageWarpingDemo(img_path):
     print("Image Warping Demo")
 
     src = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
-    width, height = src.shape
-    dh, dw = 50, 50
-    dst = np.zeros((width + abs(dw), height + abs(dh)))
-    cnt_w, cnt_h = width // 2, height // 2
+    height, width = src.shape
+
+    dx, dy = 50, 50
     ang = np.deg2rad(20)
 
-    def display_warpping(dst2src, name: str):
+    trans_mat = np.array([[1, 0, dx],
+                          [0, 1, dy],
+                          [0, 0, 1]])
+    
+    rot_mat = np.array([[np.cos(ang), -np.sin(ang), 0],
+                        [np.sin(ang),  np.cos(ang), 0],
+                        [0,            0,           0]])
+    
+    rigid_mat = np.array([[np.cos(ang), -np.sin(ang), dx],
+                          [np.sin(ang),  np.cos(ang), dy],
+                          [0,            0,           1]])
+    
 
-        for ind in np.ndindex(dst.shape):
-            row, col = dst2src(* ind)
-            dst[ind] = src[row, col] if 0 <= row < src.shape[0] and 0 <= col < src.shape[1] else 0
+    def warp(warp_mat: np.ndarray) -> np.ndarray:
+
+        # Generate coordinate grids for all pixels in the source image
+        x_indices, y_indices = np.meshgrid(np.arange(width), np.arange(height))
+
+        # Reshape coordinate grids into column vectors
+        x_indices = x_indices.reshape(-1)
+        y_indices = y_indices.reshape(-1)
+
+        # Create a matrix of homogeneous coordinates [x, y, 1]
+        homogeneous_coords = np.stack((x_indices, y_indices, np.ones_like(x_indices)))
+
+        # Apply the translation to the homogeneous coordinates
+        translated_coords = warp_mat @ homogeneous_coords
+
+        # Extract the translated x and y indices
+        translated_x_indices = translated_coords[0, :]
+        translated_y_indices = translated_coords[1, :]
+
+        # Reshape the translated indices to match the source image shape
+        translated_x_indices = translated_x_indices.reshape(height, width)
+        translated_y_indices = translated_y_indices.reshape(height, width)
+
+        # Clip the translated indices to stay within the source image bounds
+        translated_x_indices = np.clip(translated_x_indices, 0, width - 1).astype(int)
+        translated_y_indices = np.clip(translated_y_indices, 0, height - 1).astype(int)
+
+        # return the translated image by indexing from the source image
+        return src[translated_y_indices, translated_x_indices]
+
+
+    def display_warpping(warped_img: np.ndarray, name: str):
 
         f, ax = plt.subplots(1, 2)
         f.suptitle(name)
         ax[0].imshow(src)
-        ax[0].set_title('src')
-        ax[1].imshow(dst)
-        ax[1].set_title('dst')
+        ax[0].set_title('origonal')
+        ax[1].imshow(warped_img)
+        ax[1].set_title('warrped')
         plt.show()
 
     
-    translation = lambda row, col : (row - dw, col - dh)
-
-    def rotation(row: int, col: int):
-
-        new_row = int((row - cnt_w) * np.cos(ang) + (col - cnt_h) * -np.sin(ang) + cnt_w)
-        new_col = int((row - cnt_w) * np.sin(ang) + (col - cnt_h) * np.cos(ang) + cnt_h)
-        return new_row, new_col
-    
-    rigid = lambda row, col: translation(* rotation(row, col))
-    
-    display_warpping(translation, 'translation')
-    display_warpping(rigid, 'rigid')
+    display_warpping(warp(trans_mat), 'translation')
+    display_warpping(warp(rot_mat), 'rotation')
+    display_warpping(warp(rigid_mat), 'rigid')
 
 
 # ---------------------------------------------------------------------------
