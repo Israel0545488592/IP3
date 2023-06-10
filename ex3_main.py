@@ -80,7 +80,40 @@ def imageWarpingDemo(img_path):
     """
     print("Image Warping Demo")
 
-    pass
+    src = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
+    width, height = src.shape
+    dh, dw = 50, 50
+    dst = np.zeros((width + abs(dw), height + abs(dh)))
+    cnt_w, cnt_h = width // 2, height // 2
+    ang = np.deg2rad(20)
+
+    def display_warpping(dst2src, name: str):
+
+        for ind in np.ndindex(dst.shape):
+            row, col = dst2src(* ind)
+            dst[ind] = src[row, col] if 0 <= row < src.shape[0] and 0 <= col < src.shape[1] else 0
+
+        f, ax = plt.subplots(1, 2)
+        f.suptitle(name)
+        ax[0].imshow(src)
+        ax[0].set_title('src')
+        ax[1].imshow(dst)
+        ax[1].set_title('dst')
+        plt.show()
+
+    
+    translation = lambda row, col : (row - dw, col - dh)
+
+    def rotation(row: int, col: int):
+
+        new_row = int((row - cnt_w) * np.cos(ang) + (col - cnt_h) * -np.sin(ang) + cnt_w)
+        new_col = int((row - cnt_w) * np.sin(ang) + (col - cnt_h) * np.cos(ang) + cnt_h)
+        return new_row, new_col
+    
+    rigid = lambda row, col: translation(* rotation(row, col))
+    
+    display_warpping(translation, 'translation')
+    display_warpping(rigid, 'rigid')
 
 
 # ---------------------------------------------------------------------------
@@ -157,11 +190,11 @@ def main():
     print("ID:", myID())
 
     img_path = 'input/boxMan.jpg'
-    lkDemo(img_path)
-    hierarchicalkDemo(img_path)
-    compareLK(img_path)
+    #lkDemo(img_path)
+    #hierarchicalkDemo(img_path)
+    #compareLK(img_path)
 
-    #imageWarpingDemo(img_path)
+    imageWarpingDemo(img_path)
 
     #pyrGaussianDemo('input/pyr_bit.jpg')
     #pyrLaplacianDemo('input/pyr_bit.jpg')
