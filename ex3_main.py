@@ -32,8 +32,10 @@ def lkDemo(img_path):
     uv_hierarchical = opticalFlowPyrLK(img_1.astype(np.float64), img_2.astype(np.float64), 3, 20, 5)
     et = time.time()
 
-    print("\nHierarchical LK Algorithm:",
-          "\nTime: {:.4f}".format(et - st))
+    print("\nLK Algorithm:",
+          "\nTime: {:.4f}".format(et - st),
+          "\nMedian:", np.median(uv_hierarchical.reshape(-1, 2), 0),
+          "\nMean:", np.mean(uv_hierarchical.reshape(-1, 2), 0))
     displayOpticalFlow("Hierarchical LK", img_2, pts, uv_hierarchical.reshape((-1, 2)))
 
 
@@ -80,70 +82,39 @@ def imageWarpingDemo(img_path):
     """
     print("Image Warping Demo")
 
-    src = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
+    src = np.pad(cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY), ((1, 1), (1, 1)), 'empty')
     height, width = src.shape
 
     dx, dy = 50, 50
     ang = np.deg2rad(20)
 
     trans_mat = np.array([[1, 0, dx],
-                          [0, 1, dy],
-                          [0, 0, 1]])
+                          [0, 1, dy]])
     
     rot_mat = np.array([[np.cos(ang), -np.sin(ang), 0],
-                        [np.sin(ang),  np.cos(ang), 0],
-                        [0,            0,           0]])
+                        [np.sin(ang),  np.cos(ang), 0]])
     
     rigid_mat = np.array([[np.cos(ang), -np.sin(ang), dx],
-                          [np.sin(ang),  np.cos(ang), dy],
-                          [0,            0,           1]])
+                          [np.sin(ang),  np.cos(ang), dy]])
     
 
     def warp(warp_mat: np.ndarray) -> np.ndarray:
+        return cv2.warpAffine(src, warp_mat.astype(np.float32), (width, height))
 
-        # Generate coordinate grids for all pixels in the source image
-        x_indices, y_indices = np.meshgrid(np.arange(width), np.arange(height))
-
-        # Reshape coordinate grids into column vectors
-        x_indices = x_indices.reshape(-1)
-        y_indices = y_indices.reshape(-1)
-
-        # Create a matrix of homogeneous coordinates [x, y, 1]
-        homogeneous_coords = np.stack((x_indices, y_indices, np.ones_like(x_indices)))
-
-        # Apply the translation to the homogeneous coordinates
-        translated_coords = warp_mat @ homogeneous_coords
-
-        # Extract the translated x and y indices
-        translated_x_indices = translated_coords[0, :]
-        translated_y_indices = translated_coords[1, :]
-
-        # Reshape the translated indices to match the source image shape
-        translated_x_indices = translated_x_indices.reshape(height, width)
-        translated_y_indices = translated_y_indices.reshape(height, width)
-
-        # Clip the translated indices to stay within the source image bounds
-        translated_x_indices = np.clip(translated_x_indices, 0, width - 1).astype(int)
-        translated_y_indices = np.clip(translated_y_indices, 0, height - 1).astype(int)
-
-        # return the translated image by indexing from the source image
-        return src[translated_y_indices, translated_x_indices]
-
-
-    def display_warpping(warped_img: np.ndarray, name: str):
+    def display_warp(warped_img: np.ndarray, name: str):
 
         f, ax = plt.subplots(1, 2)
         f.suptitle(name)
-        ax[0].imshow(src)
+        ax[0].imshow(src, cmap = 'gray')
         ax[0].set_title('origonal')
-        ax[1].imshow(warped_img)
+        ax[1].imshow(warped_img, cmap = 'gray')
         ax[1].set_title('warrped')
         plt.show()
 
     
-    display_warpping(warp(trans_mat), 'translation')
-    display_warpping(warp(rot_mat), 'rotation')
-    display_warpping(warp(rigid_mat), 'rigid')
+    display_warp(warp(trans_mat), 'translation')
+    display_warp(warp(rot_mat), 'rotation')
+    display_warp(warp(rigid_mat), 'rigid')
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +187,9 @@ def blendDemo():
     cv2.imwrite('sunset_cat.png', cv2.cvtColor((im_blend * 255).astype(np.uint8), cv2.COLOR_RGB2BGR))
 
 
-def main():
+
+if __name__ == '__main__':
+    
     print("ID:", myID())
 
     img_path = 'input/boxMan.jpg'
@@ -229,7 +202,3 @@ def main():
     #pyrGaussianDemo('input/pyr_bit.jpg')
     #pyrLaplacianDemo('input/pyr_bit.jpg')
     #blendDemo()
-
-
-if __name__ == '__main__':
-    main()
