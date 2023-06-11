@@ -89,13 +89,36 @@ def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int, stepSize: int, 
 # ---------------------------------------------------------------------------
 
 
+def findAffineLK(im1: np.ndarray, im2: np.ndarray, motion2matrix, min_err: float = 0.01) -> np.ndarray:
+
+    prominent_fetures = cv2.goodFeaturesToTrack(im1, maxCorners = 100, qualityLevel = 0.3, minDistance = 7, blockSize = 7)
+    directions = cv2.calcOpticalFlowPyrLK(im1, im2, prominent_fetures, maxLevel = 5) - prominent_fetures
+
+    ans = np.zeros((2, 3))
+    error = np.inf
+    wrp_im = copy(im1)
+
+    for quiver in directions:
+
+        if error < min_err: break
+
+        wrp_mat = motion2matrix(quiver[0, 0], quiver[0, 1])
+        wrp_im = cv2.warpAffine(im1, wrp_mat, im1.shape[::-1])
+        mse = np.square(im2 - wrp_im).mean()
+
+        if mse < error: error, ans = mse, wrp_mat
+
+    return ans
+            
+
+
 def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     """
     :param im1: image 1 in grayscale format.
     :param im2: image 1 after Translation.
     :return: Translation matrix by LK.
     """
-    pass
+    return findAffineLK(im1, im2, lambda dx, dy : np.array([[1, 0, dx], [0, 1, dy]], dtype = np.float32))
 
 
 def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
@@ -104,7 +127,17 @@ def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Rigid.
     :return: Rigid matrix by LK.
     """
-    pass
+    def motion2rot_mat(dx: float, dy: float) -> np.ndarray:
+
+        ang = np.arctan(dy / dx) if dx != 0 else 0
+        return np.array([[np.cos(ang), -np.sin(ang), dx], [np.sin(ang),  np.cos(ang), dy]], dtype = np.float32)
+    
+    # finding rotation first and then translation (translation ain't linear and thus the order matters)
+    rot_mat = findAffineLK(im1, im2, motion2rot_mat)
+    rot_img = cv2.warpAffine(im1, rot_mat, im1.shape[::-1])
+    trans_mat = findTranslationLK(rot_img, im2)
+
+    return rot_mat @ trans_mat
 
 
 def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:

@@ -32,7 +32,7 @@ def lkDemo(img_path):
     uv_hierarchical = opticalFlowPyrLK(img_1.astype(np.float64), img_2.astype(np.float64), 3, 20, 5)
     et = time.time()
 
-    print("\nLK Algorithm:",
+    print("\nLK hierarchial:",
           "\nTime: {:.4f}".format(et - st),
           "\nMedian:", np.median(uv_hierarchical.reshape(-1, 2), 0),
           "\nMean:", np.mean(uv_hierarchical.reshape(-1, 2), 0))
@@ -82,39 +82,38 @@ def imageWarpingDemo(img_path):
     """
     print("Image Warping Demo")
 
-    src = np.pad(cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY), ((1, 1), (1, 1)), 'empty')
-    height, width = src.shape
+    src_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
+    height, width = src_img.shape
 
-    dx, dy = 50, 50
+    dx, dy = -.1, -.2
     ang = np.deg2rad(20)
 
     trans_mat = np.array([[1, 0, dx],
                           [0, 1, dy]])
     
-    rot_mat = np.array([[np.cos(ang), -np.sin(ang), 0],
-                        [np.sin(ang),  np.cos(ang), 0]])
-    
     rigid_mat = np.array([[np.cos(ang), -np.sin(ang), dx],
                           [np.sin(ang),  np.cos(ang), dy]])
-    
 
-    def warp(warp_mat: np.ndarray) -> np.ndarray:
-        return cv2.warpAffine(src, warp_mat.astype(np.float32), (width, height))
 
-    def display_warp(warped_img: np.ndarray, name: str):
+    def display_results(warp_mat: np.ndarray, tested_func, name: str):
+
+        wrp_img = cv2.warpAffine(src_img, warp_mat.astype(np.float32), (width, height))
+        ret_mat = tested_func(src_img, wrp_img)
 
         f, ax = plt.subplots(1, 2)
         f.suptitle(name)
-        ax[0].imshow(src, cmap = 'gray')
+        ax[0].imshow(src_img, cmap = 'gray')
         ax[0].set_title('origonal')
-        ax[1].imshow(warped_img, cmap = 'gray')
+        ax[1].imshow(wrp_img, cmap = 'gray')
         ax[1].set_title('warrped')
         plt.show()
+        
+        print(f'actuall mat {warp_mat}', f'retrived mat {ret_mat}', sep = '\n\n')
 
-    
-    display_warp(warp(trans_mat), 'translation')
-    display_warp(warp(rot_mat), 'rotation')
-    display_warp(warp(rigid_mat), 'rigid')
+    display_results(trans_mat, findTranslationCorr, 'translation corr')
+    display_results(trans_mat, findTranslationLK, 'translation LK')
+    display_results(rigid_mat, findRigidCorr, 'rigid corr')
+    display_results(rigid_mat, findRigidLK, 'rigid LK')
 
 
 # ---------------------------------------------------------------------------
