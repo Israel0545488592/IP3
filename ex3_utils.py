@@ -55,8 +55,6 @@ def opticalFlow(im1: np.ndarray, im2: np.ndarray, step_size = 10, win_size = 5) 
     return np.array([(col, row) for row, col in copy(indxs)]), np.array([min_cross_corr(row, col) for row, col in copy(indxs)])
     
         
-
-
 def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int, stepSize: int, winSize: int) -> np.ndarray:
     """
     :param img1: First image
@@ -81,7 +79,6 @@ def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int, stepSize: int, 
         return exp + big
         
     return reduce(lambda motion, ind : add_flows(motion, flow(ind)), range(-2, -k -1, -1), flow(-1))
-
 
 
 # ---------------------------------------------------------------------------
@@ -110,15 +107,27 @@ def findAffineLK(im1: np.ndarray, im2: np.ndarray, motion2matrix, min_err: float
     return ans
 
 
+def motion2rot(dx: float, dy: float) -> np.ndarray:
+
+    ang = np.arctan(-dx / dy) if dy != 0 else 0
+
+    return np.array([[np.cos(ang), -np.sin(ang), 0],
+                     [np.sin(ang),  np.cos(ang), 0],
+                     [0,            0,           1]])
+
+def motion2trans(dx: float, dy: float) -> np.ndarray:
+    return np.array([[1, 0, dx],
+                     [0, 1, dy],
+                     [0, 0, 1]])
+
+
 def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     """
     :param im1: image 1 in grayscale format.
     :param im2: image 1 after Translation.
     :return: Translation matrix by LK.
     """
-    return findAffineLK(im1, im2, lambda dx, dy : np.array([[1, 0, dx],
-                                                            [0, 1, dy],
-                                                            [0, 0, 1]]))
+    return findAffineLK(im1, im2, motion2trans)
 
 
 def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
@@ -127,19 +136,13 @@ def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Rigid.
     :return: Rigid matrix by LK.
     """
-    def motion2rot_mat(dx: float, dy: float) -> np.ndarray:
-
-        ang = np.arctan(dy / dx) if dx != 0 else 0
-        return np.array([[np.cos(ang), -np.sin(ang), 0],
-                         [np.sin(ang),  np.cos(ang), 0],
-                         [0,            0,           1]])
-    
     # finding rotation first and then translation (translation ain't linear and thus the order matters)
-    rot_mat = findAffineLK(im1, im2, motion2rot_mat)
+    rot_mat = findAffineLK(im1, im2, motion2rot)
     rot_img = cv2.warpPerspective(im1, rot_mat, im1.shape[::-1])
     trans_mat = findTranslationLK(rot_img, im2)
 
-    return trans_mat @ rot_mat
+    # go to the origin rotate properly come back
+    return trans_mat @ rot_mat @ np.linalg.inv(trans_mat)
 
 
 def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
@@ -169,7 +172,26 @@ def warpImages(im1: np.ndarray, im2: np.ndarray, T: np.ndarray) -> np.ndarray:
     :return: warp image 2 according to T and display both image1
     and the wrapped version of the image2 in the same figure.
     """
-    pass
+    height, width = im2.shape
+
+    # padding with zeros so rogh coordinates would point to a black pixle after clipping
+    im1 = np.pad(im1, ((1, 1), (1, 1)), 'constant')
+
+    x_indices, y_indices = np.meshgrid(np.arange(width), np.arange(height))
+
+    # create a matrix of homogeneous coordinates [x, y, 1]
+    x_indices, y_indices = x_indices.flatten(), y_indices.flatten()
+    homogeneous_coords = np.stack((x_indices, y_indices, np.ones_like(x_indices)))
+
+    translated_coords = np.linalg.inv(T) @ homogeneous_coords
+
+    # clipping the translated indices to stay within the source image bounds
+    translated_x_indices = translated_coords[0, :].astype(int)
+    translated_y_indices = translated_coords[1, :].astype(int)
+    translated_x_indices = np.clip(translated_x_indices, 0, width - 1)
+    translated_y_indices = np.clip(translated_y_indices, 0, height - 1)
+
+    return im1[translated_y_indices, translated_x_indices].reshape((height, width))
 
 
 # ---------------------------------------------------------------------------

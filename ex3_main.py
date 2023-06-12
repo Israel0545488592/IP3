@@ -84,22 +84,23 @@ def imageWarpingDemo(img_path):
 
     src_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
 
-    dx, dy = 30, 30
-    ang = np.deg2rad(30)
+    dx, dy = 40, -20
+    ang = np.deg2rad(45)
 
     trans_mat = np.array([[1, 0, dx],
                           [0, 1, dy],
-                          [0, 0, 1]])
+                          [0, 0, 1]]).astype(np.float32)
     
     rigid_mat = np.array([[np.cos(ang), -np.sin(ang), dx],
                           [np.sin(ang),  np.cos(ang), dy],
-                          [0,            0,           1]])
+                          [0,            0,           1]]).astype(np.float32)
 
 
-    def display_results(warp_mat: np.ndarray, tested_func, name: str):
+    def display_results(wrp_mat: np.ndarray, tested_func, name: str):
 
-        cv_res = cv2.warpPerspective(src_img, warp_mat.astype(np.float32), src_img.shape[::-1])
-        my_res = cv2.warpPerspective(src_img, tested_func(src_img, cv_res), src_img.shape[::-1])
+        cv_res = cv2.warpPerspective(src_img, wrp_mat, src_img.shape[::-1])
+        if tested_func == warpImages: my_res = warpImages(src_img, cv_res, wrp_mat)
+        else: my_res = cv2.warpPerspective(src_img, tested_func(src_img, cv_res), src_img.shape[::-1])
 
         f, ax = plt.subplots(1, 3)
         f.suptitle(f'{name}\nMSE = {np.square(cv_res - my_res).mean()}')
@@ -112,10 +113,14 @@ def imageWarpingDemo(img_path):
         plt.show()
 
 
-    #display_results(trans_mat, findTranslationCorr, 'translation corr')
     display_results(trans_mat, findTranslationLK, 'translation LK')
-    #display_results(rigid_mat, findRigidCorr, 'rigid corr')
     display_results(rigid_mat, findRigidLK, 'rigid LK')
+    #display_results(trans_mat, findTranslationCorr, 'translation corr')
+    #display_results(rigid_mat, findRigidCorr, 'rigid corr')
+    display_results(trans_mat, warpImages, 'translation warpping')
+    display_results(rigid_mat, warpImages, 'rigid warpping')
+
+    
 
 
 # ---------------------------------------------------------------------------
