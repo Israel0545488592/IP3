@@ -107,27 +107,15 @@ def findAffineLK(im1: np.ndarray, im2: np.ndarray, motion2matrix, min_err: float
     return ans
 
 
-def motion2rot(dx: float, dy: float) -> np.ndarray:
-
-    ang = np.arctan(-dx / dy) if dy != 0 else 0
-
-    return np.array([[np.cos(ang), -np.sin(ang), 0],
-                     [np.sin(ang),  np.cos(ang), 0],
-                     [0,            0,           1]])
-
-def motion2trans(dx: float, dy: float) -> np.ndarray:
-    return np.array([[1, 0, dx],
-                     [0, 1, dy],
-                     [0, 0, 1]])
-
-
 def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     """
     :param im1: image 1 in grayscale format.
     :param im2: image 1 after Translation.
     :return: Translation matrix by LK.
     """
-    return findAffineLK(im1, im2, motion2trans)
+    return findAffineLK(im1, im2, lambda dx, dy : np.array([[1, 0, dx],
+                                                            [0, 1, dy],
+                                                            [0, 0, 1]], dtype = np.float32))
 
 
 def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
@@ -136,6 +124,14 @@ def findRigidLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :param im2: image 1 after Rigid.
     :return: Rigid matrix by LK.
     """
+    def motion2rot(dx: float, dy: float) -> np.ndarray:
+
+        ang = np.arctan(-dx / dy) if dy != 0 else 0
+
+        return np.array([[np.cos(ang), -np.sin(ang), 0],
+                         [np.sin(ang),  np.cos(ang), 0],
+                         [0,            0,           1]], dtype = np.float32)
+
     # finding rotation first and then translation (translation ain't linear and thus the order matters)
     rot_mat = findAffineLK(im1, im2, motion2rot)
     rot_img = cv2.warpPerspective(im1, rot_mat, im1.shape[::-1])
@@ -152,6 +148,7 @@ def findTranslationCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
     :return: Translation matrix by correlation.
     """
     pass
+
 
 
 def findRigidCorr(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:

@@ -84,16 +84,15 @@ def imageWarpingDemo(img_path):
 
     src_img = cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2GRAY)
 
-    dx, dy = 40, -20
-    ang = np.deg2rad(45)
+    dx, dy, ang = -20, 30, np.deg2rad(30)
 
     trans_mat = np.array([[1, 0, dx],
                           [0, 1, dy],
-                          [0, 0, 1]]).astype(np.float32)
-    
+                          [0, 0, 1]], dtype = np.float32)
+
     rigid_mat = np.array([[np.cos(ang), -np.sin(ang), dx],
                           [np.sin(ang),  np.cos(ang), dy],
-                          [0,            0,           1]]).astype(np.float32)
+                          [0,            0,           1]], dtype = np.float32)
 
 
     def display_results(wrp_mat: np.ndarray, tested_func, name: str):
@@ -112,11 +111,9 @@ def imageWarpingDemo(img_path):
         ax[2].set_title('result')
         plt.show()
 
-
+    
     display_results(trans_mat, findTranslationLK, 'translation LK')
     display_results(rigid_mat, findRigidLK, 'rigid LK')
-    #display_results(trans_mat, findTranslationCorr, 'translation corr')
-    #display_results(rigid_mat, findRigidCorr, 'rigid corr')
     display_results(trans_mat, warpImages, 'translation warpping')
     display_results(rigid_mat, warpImages, 'rigid warpping')
 
@@ -199,12 +196,12 @@ if __name__ == '__main__':
     print("ID:", myID())
 
     img_path = 'input/boxMan.jpg'
-    #lkDemo(img_path)
-    #hierarchicalkDemo(img_path)
-    #compareLK(img_path)
+    lkDemo(img_path)
+    hierarchicalkDemo(img_path)
+    compareLK(img_path)
 
     imageWarpingDemo(img_path)
 
-    #pyrGaussianDemo('input/pyr_bit.jpg')
-    #pyrLaplacianDemo('input/pyr_bit.jpg')
-    #blendDemo()
+    pyrGaussianDemo('input/pyr_bit.jpg')
+    pyrLaplacianDemo('input/pyr_bit.jpg')
+    blendDemo()
