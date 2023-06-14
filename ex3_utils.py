@@ -85,26 +85,24 @@ def opticalFlowPyrLK(img1: np.ndarray, img2: np.ndarray, k: int, stepSize: int, 
 # ------------------------ Image Alignment & Warping ------------------------
 # ---------------------------------------------------------------------------
 
+def MSE(im1: np.ndarray, im2: np.ndarray) -> float:
+    return np.square(im1 - im2).mean()
 
-def findAffineLK(im1: np.ndarray, im2: np.ndarray, motion2matrix, min_err: float = 0.01) -> np.ndarray:
+
+def findAffineLK(im1: np.ndarray, im2: np.ndarray, motion2matrix) -> np.ndarray:
+    """
+    Generic method for computing affine transformation
+    the method 'motion2matrix' should get as input translation (dx, dy)
+    and return the corrasponding transformation matrix
+    """
 
     prominent_fetures = cv2.goodFeaturesToTrack(im1, maxCorners = 100, qualityLevel = 0.3, minDistance = 7, blockSize = 7)
     directions = cv2.calcOpticalFlowPyrLK(im1, im2, prominent_fetures, None, maxLevel = 5)[0] - prominent_fetures
 
-    ans = np.eye(3)
-    error = np.inf
+    def candidates() -> np.ndarray:
+        for vec in directions: yield motion2matrix(vec[0, 0], vec[0, 1])
 
-    for vec in directions:
-
-        if error < min_err: break
-
-        wrp_mat = motion2matrix(vec[0, 0], vec[0, 1])
-        wrp_im = cv2.warpPerspective(im1, wrp_mat, im1.shape[::-1])
-        mse = np.square(im2 - wrp_im).mean()
-
-        if mse < error: error, ans = mse, wrp_mat
-
-    return ans
+    return min(candidates(), key = lambda mat : MSE(im2, cv2.warpPerspective(im1, mat, im1.shape[::-1])))
 
 
 def findTranslationLK(im1: np.ndarray, im2: np.ndarray) -> np.ndarray:
@@ -251,7 +249,6 @@ def pyrBlend(img_1: np.ndarray, img_2: np.ndarray, mask: np.ndarray, levels: int
     :param levels: Pyramid depth
     :return: (Naive blend, Blended Image)
     """
-
     lap_pyr_1, lap_pyr_2 = laplaceianReduce(img_1, levels), laplaceianReduce(img_2, levels)
     gaus_pyr = gaussianPyr(mask, levels)
     naive_blend = img_1 * mask + img_2 * (1 - mask)

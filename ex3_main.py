@@ -102,7 +102,7 @@ def imageWarpingDemo(img_path):
         else: my_res = cv2.warpPerspective(src_img, tested_func(src_img, cv_res), src_img.shape[::-1])
 
         f, ax = plt.subplots(1, 3)
-        f.suptitle(f'{name}\nMSE = {np.square(cv_res - my_res).mean()}')
+        f.suptitle(f'{name}\nMSE = {MSE(cv_res, my_res)}')
         ax[0].imshow(src_img, cmap = 'gray')
         ax[0].set_title('origonal')
         ax[1].imshow(cv_res, cmap = 'gray')
